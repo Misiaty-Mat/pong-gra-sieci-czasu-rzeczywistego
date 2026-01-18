@@ -1,35 +1,35 @@
-// Canvas Related
+// Canvas
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
 const socket = io("/pong");
 let isReferee = false;
 let paddleIndex = 0;
+let room = null;
 
-let width = 500;
-let height = 700;
+const width = 500;
+const height = 700;
 
-// Paddle
-let paddleHeight = 10;
-let paddleWidth = 50;
-let paddleDiff = 25;
-let paddleX = [225, 225];
-let trajectoryX = [0, 0];
+// Kładka
+const paddleHeight = 10;
+const paddleWidth = 50;
+const paddleDiff = 25;
+const paddleBounceOffset = 20;
+const paddleX = [225, 225];
+const trajectoryX = [0, 0];
 let playerMoved = false;
 
-// Ball
+// Piłka
 let ballX = 250;
 let ballY = 350;
-let ballRadius = 5;
+const ballRadius = 5;
 let ballDirection = 1;
-
-// Speed
 let speedY = 2;
 let speedX = 0;
 
-// Score for Both Players
-let score = [0, 0];
+// Punkty obu graczy
+const score = [0, 0];
 
-// Create Canvas Element
+// Utworzenie Canvas 
 function createCanvas() {
   canvas.id = "canvas";
   canvas.width = width;
@@ -38,34 +38,32 @@ function createCanvas() {
   renderCanvas();
 }
 
-// Wait for Opponents
+// Oczekiwanie na przeciwnika
 function renderIntro() {
-  // Canvas Background
+  // Canvas tło
   context.fillStyle = "black";
   context.fillRect(0, 0, width, height);
 
-  // Intro Text
+  // Tekst początkowy
   context.fillStyle = "white";
   context.font = "32px Courier New";
   context.fillText("Waiting for opponent...", 20, canvas.height / 2 - 30);
 }
 
-// Render Everything on Canvas
+// Renderowanie elementów gry
 function renderCanvas() {
-  // Canvas Background
+  // Canvas tło
   context.fillStyle = "black";
   context.fillRect(0, 0, width, height);
 
-  // Paddle Color
+  // Kolor kładek
   context.fillStyle = "white";
 
-  // Bottom Paddle
+  // Renderowanie kładek
   context.fillRect(paddleX[0], height - 20, paddleWidth, paddleHeight);
-
-  // Top Paddle
   context.fillRect(paddleX[1], 10, paddleWidth, paddleHeight);
 
-  // Dashed Center Line
+  // Środek boiska
   context.beginPath();
   context.setLineDash([4]);
   context.moveTo(0, 350);
@@ -73,19 +71,19 @@ function renderCanvas() {
   context.strokeStyle = "grey";
   context.stroke();
 
-  // Ball
+  // Piłka
   context.beginPath();
   context.arc(ballX, ballY, ballRadius, 2 * Math.PI, false);
   context.fillStyle = "white";
   context.fill();
 
-  // Score
+  // Punkty
   context.font = "32px Courier New";
   context.fillText(score[0], 20, canvas.height / 2 + 50);
   context.fillText(score[1], 20, canvas.height / 2 - 30);
 }
 
-// Reset Ball to Center
+// Reset piłki do środka
 function ballReset() {
   ballX = width / 2;
   ballY = height / 2;
@@ -97,14 +95,14 @@ function ballReset() {
   });
 }
 
-// Adjust Ball Movement
+// Ruch piłki
 function ballMove() {
-  // Vertical Speed
   ballY += speedY * ballDirection;
-  // Horizontal Speed
+
   if (playerMoved) {
     ballX += speedX;
   }
+
   socket.emit("ballMove", {
     ballX,
     ballY,
@@ -112,23 +110,23 @@ function ballMove() {
   });
 }
 
-// Determine What Ball Bounces Off, Score Points, Reset Ball
+// Zachowanie piłki przy odbiciach
 function ballBoundaries() {
-  // Bounce off Left Wall
+  // Odbicie od lewej ściany
   if (ballX < 0 && speedX < 0) {
     speedX = -speedX;
   }
-  // Bounce off Right Wall
+  // Odbicie od prawej ściany
   if (ballX > width && speedX > 0) {
     speedX = -speedX;
   }
-  // Bounce off player paddle (bottom)
-  if (ballY > height - paddleDiff) {
+
+  // Odbicie od dolnej kładki
+  if (ballY > height - paddleBounceOffset) {
     if (ballX >= paddleX[0] && ballX <= paddleX[0] + paddleWidth) {
-      // Add Speed on Hit
       if (playerMoved) {
         speedY += 1;
-        // Max Speed
+
         if (speedY > 5) {
           speedY = 5;
         }
@@ -137,18 +135,18 @@ function ballBoundaries() {
       trajectoryX[0] = ballX - (paddleX[0] + paddleDiff);
       speedX = trajectoryX[0] * 0.3;
     } else {
-      // Reset Ball, add to Computer Score
+      // Reset piłki i punkt dla gracza 1
       ballReset();
       score[1]++;
     }
   }
-  // Bounce off computer paddle (top)
-  if (ballY < paddleDiff) {
+
+  // Odbicie od górnej kładki
+  if (ballY < paddleBounceOffset) {
     if (ballX >= paddleX[1] && ballX <= paddleX[1] + paddleWidth) {
-      // Add Speed on Hit
       if (playerMoved) {
         speedY += 1;
-        // Max Speed
+
         if (speedY > 5) {
           speedY = 5;
         }
@@ -163,8 +161,9 @@ function ballBoundaries() {
   }
 }
 
-// Called Every Frame
+// Zachowane animacji
 function animate() {
+  // Synchronizacja ruchu piłki
   if (isReferee) {
     ballMove();
     ballBoundaries();
@@ -173,7 +172,6 @@ function animate() {
   window.requestAnimationFrame(animate);
 }
 
-// Loads Game, Reset Everything
 function loadGame() {
   createCanvas();
   renderIntro();
@@ -182,6 +180,7 @@ function loadGame() {
 
 function startGame() {
   paddleIndex = isReferee ? 0 : 1;
+  playerMoved = false;
   window.requestAnimationFrame(animate);
   canvas.addEventListener("mousemove", (e) => {
     playerMoved = true;
@@ -195,27 +194,25 @@ function startGame() {
     socket.emit("paddleMove", {
       xPosition: paddleX[paddleIndex],
     });
-    // Hide Cursor
     canvas.style.cursor = "none";
   });
 }
 
-// On Load
 loadGame();
 
 socket.on("connect", () => {
   console.log("Connected as...", socket.id);
 });
 
-socket.on("startGame", (refereeId) => {
+socket.on("startGame", (refereeId, roomId) => {
   console.log("Referee is ", refereeId);
 
+  room = roomId;
   isReferee = socket.id === refereeId;
   startGame();
 });
 
 socket.on("paddleMove", (paddleData) => {
-  // Toggle 1 into 0 and 0 into 1
   const opponentPaddleIndex = 1 - paddleIndex;
   paddleX[opponentPaddleIndex] = paddleData.xPosition;
 });

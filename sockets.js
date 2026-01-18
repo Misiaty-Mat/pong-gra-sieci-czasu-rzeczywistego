@@ -1,7 +1,6 @@
 let readyPlayerCount = 0;
 
 function listen(io) {
-  // const tetrisNamespace = io.of('/tetris');
   const pongNamespace = io.of("/pong");
   pongNamespace.on("connection", (socket) => {
     let room;
@@ -9,7 +8,7 @@ function listen(io) {
     console.log("user connected", socket.id);
 
     socket.on("ready", () => {
-      let room = "room" + Math.floor(readyPlayerCount / 2);
+      room = "room" + Math.floor(readyPlayerCount / 2);
       socket.join(room);
 
       console.log("Player ready", socket.id, room);
@@ -17,7 +16,7 @@ function listen(io) {
       readyPlayerCount++;
 
       if (readyPlayerCount % 2 === 0) {
-        pongNamespace.in(room).emit("startGame", socket.id);
+        pongNamespace.in(room).emit("startGame", socket.id, room);
       }
     });
 
