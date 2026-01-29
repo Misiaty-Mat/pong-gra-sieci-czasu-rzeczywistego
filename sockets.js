@@ -28,6 +28,10 @@ function listen(io) {
       socket.to(room).emit("ballMove", ballData);
     });
 
+    socket.on("scoreUpdate", (scoreData) => {
+      socket.to(room).emit("scoreUpdate", scoreData);
+    });
+
     socket.on("disconnect", (reason) => {
       console.log(`Client ${socket.id} disconnected: ${reason}`);
       socket.leave(room);

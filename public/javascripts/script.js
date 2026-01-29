@@ -2,10 +2,16 @@
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
 const socket = io("/pong");
+
+// Zmienna oznaczająca sędziego (hosta gry)
 let isReferee = false;
+
+// Indeks paletki gracza
 let paddleIndex = 0;
+
 let room = null;
 
+// Rozmiar planszy
 const width = 500;
 const height = 700;
 
@@ -27,7 +33,7 @@ let speedY = 2;
 let speedX = 0;
 
 // Punkty obu graczy
-const score = [0, 0];
+let score = [0, 0];
 
 // Utworzenie Canvas 
 function createCanvas() {
@@ -91,7 +97,6 @@ function ballReset() {
   socket.emit("ballMove", {
     ballX,
     ballY,
-    score,
   });
 }
 
@@ -106,7 +111,6 @@ function ballMove() {
   socket.emit("ballMove", {
     ballX,
     ballY,
-    score,
   });
 }
 
@@ -139,7 +143,8 @@ function ballBoundaries() {
       ballReset();
       score[1]++;
     }
-  }
+  }  socket.emit("scoreUpdate", { score });
+    
 
   // Odbicie od górnej kładki
   if (ballY < paddleBounceOffset) {
@@ -156,6 +161,7 @@ function ballBoundaries() {
       speedX = trajectoryX[1] * 0.3;
     } else {
       ballReset();
+      socket.emit("scoreUpdate", { score });
       score[0]++;
     }
   }
@@ -200,10 +206,15 @@ function startGame() {
 
 loadGame();
 
+
+// Eventy WebSocket 
+
+// Sprawdzenie połączenia oraz lokalne logowanie o nim danych
 socket.on("connect", () => {
   console.log("Connected as...", socket.id);
 });
 
+// event rozpoczęcia gry
 socket.on("startGame", (refereeId, roomId) => {
   console.log("Referee is ", refereeId);
 
@@ -212,11 +223,18 @@ socket.on("startGame", (refereeId, roomId) => {
   startGame();
 });
 
+// event ruchu paletki przeciwnika
 socket.on("paddleMove", (paddleData) => {
   const opponentPaddleIndex = 1 - paddleIndex;
   paddleX[opponentPaddleIndex] = paddleData.xPosition;
 });
 
+// event ruchu piłki
 socket.on("ballMove", (ballData) => {
   ({ ballX, ballY, score } = ballData);
+});
+
+// event aktualizacji wyniku
+socket.on("scoreUpdate", (scoreData) => {
+  score = scoreData.score
 });
